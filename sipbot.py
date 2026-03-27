@@ -1,38 +1,22 @@
-from pybaresip import Baresip
-import time
+from baresipy import BareSIP
+from time import sleep
 
 gateway = "181571.voice.plusofon.ru"
 user = "21261774115582"
 pswd = "FlvUenbQ"
 
+class MyVoiceBot(BareSIP):
+    def handle_incoming_call(self, number):
+        print(f"Входящий звонок от {number}")
+        self.accept_call()
 
-class MyVoiceBot(Baresip):
-    def on_incoming_call(self, call, number):
-        print(f"Входящий звонок от: {number}")
-        call.answer()  # отвечаем на вызов
-
-    def on_call_established(self, call):
+    def handle_call_established(self):
         print("Звонок установлен, говорю...")
-        call.speak("Здравствуйте! Вас приветствует голосовой бот.")
-        call.speak("Спасибо за звонок. До свидания.")
-        call.hangup()
+        self.speak("Здравствуйте! Вас приветствует голосовой бот.")
+        self.speak("Спасибо за звонок. До свидания.")
+        self.hang()
 
-    def on_call_ended(self, call, reason):
-        print(f"Вызов завершён: {reason}")
+bot = MyVoiceBot(user, pswd, gateway)
 
-
-bot = MyVoiceBot(
-    username=user,
-    password=pswd,
-    domain=gateway,
-    proxy=gateway,
-    transport="tcp"
-)
-
-bot.start()
-
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    bot.stop()
+while bot.running:
+    sleep(1)
