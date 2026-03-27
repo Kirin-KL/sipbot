@@ -1,25 +1,38 @@
-from pysipp import SIPp, SIPpConfig
+from pybaresip import Baresip
+import time
 
-config = SIPpConfig(
-    username="21261774115582",
-    password="FlvUenbQ",
-    domain="181571.voice.plusofon.ru",
-    proxy="181571.voice.plusofon.ru",
-    transport="tcp",
-    local_ip="0.0.0.0",
-    local_port=5060
+gateway = "181571.voice.plusofon.ru"
+user = "21261774115582"
+pswd = "FlvUenbQ"
+
+
+class MyVoiceBot(Baresip):
+    def on_incoming_call(self, call, number):
+        print(f"Входящий звонок от: {number}")
+        call.answer()  # отвечаем на вызов
+
+    def on_call_established(self, call):
+        print("Звонок установлен, говорю...")
+        call.speak("Здравствуйте! Вас приветствует голосовой бот.")
+        call.speak("Спасибо за звонок. До свидания.")
+        call.hangup()
+
+    def on_call_ended(self, call, reason):
+        print(f"Вызов завершён: {reason}")
+
+
+bot = MyVoiceBot(
+    username=user,
+    password=pswd,
+    domain=gateway,
+    proxy=gateway,
+    transport="tcp"
 )
 
-ua = SIPp(config)
+bot.start()
 
-# Отправляем REGISTER
-ua.register()
-print("REGISTER sent")
-
-# Делаем тестовый звонок
-target = "sip:NUMBER@181571.voice.plusofon.ru"
-ua.invite(target)
-print("INVITE sent to", target)
-
-# Ждём входящих сообщений
-ua.listen()
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    bot.stop()
