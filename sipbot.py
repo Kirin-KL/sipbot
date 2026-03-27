@@ -1,29 +1,25 @@
-import pjsua as pj
+from pysipp import SIPp, SIPpConfig
 
-def log_cb(level, msg, length):
-    print(msg)
-
-lib = pj.Lib()
-
-lib.init(log_cfg=pj.LogConfig(level=4, callback=log_cb))
-
-transport = lib.create_transport(
-    pj.TransportType.TCP,
-    pj.TransportConfig(5060)
-)
-
-lib.start()
-
-acc_cfg = pj.AccountConfig(
-    domain="181571.voice.plusofon.ru",
+config = SIPpConfig(
     username="21261774115582",
     password="FlvUenbQ",
-    proxy=["sip:181571.voice.plusofon.ru;transport=tcp"],
+    domain="181571.voice.plusofon.ru",
+    proxy="181571.voice.plusofon.ru",
+    transport="tcp",
+    local_ip="0.0.0.0",
+    local_port=5060
 )
 
-acc = lib.create_account(acc_cfg)
+ua = SIPp(config)
 
-print("Регистрация отправлена. Нажми Enter для выхода.")
-input()
+# Отправляем REGISTER
+ua.register()
+print("REGISTER sent")
 
-lib.destroy()
+# Делаем тестовый звонок
+target = "sip:NUMBER@181571.voice.plusofon.ru"
+ua.invite(target)
+print("INVITE sent to", target)
+
+# Ждём входящих сообщений
+ua.listen()
