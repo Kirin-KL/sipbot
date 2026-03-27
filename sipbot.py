@@ -1,6 +1,11 @@
 from baresipy import BareSIP
 from time import sleep
 
+# Передаём фиктивные данные — baresipy требует их, но мы НЕ даём ему создавать аккаунт
+FAKE_USER = "dummy"
+FAKE_PASS = "dummy"
+FAKE_GATEWAY = "dummy"
+
 class MyVoiceBot(BareSIP):
     def handle_incoming_call(self, number):
         print(f"Входящий звонок от: {number}")
@@ -15,7 +20,7 @@ class MyVoiceBot(BareSIP):
     def handle_call_ended(self, reason):
         print(f"Вызов завершён: {reason}")
 
-bot = MyVoiceBot()  # ВАЖНО: не передавать логин/пароль
+bot = MyVoiceBot(FAKE_USER, FAKE_PASS, FAKE_GATEWAY)
 
 while bot.running:
     sleep(1)
