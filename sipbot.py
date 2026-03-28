@@ -5,9 +5,9 @@ from python_sip_client import BareSIP
 # --- КОНФИГУРАЦИЯ ---
 # Путь к вашему аудиофайлу (рекомендуется формат .wav)
 AUDIO_FILE_PATH = "/home/user/voice_message.wav" # ИЗМЕНИТЕ ЭТОТ ПУТЬ
-SIP_USER = "your_username"    # ИЗМЕНИТЕ
-SIP_PASSWORD = "your_password" # ИЗМЕНИТЕ
-SIP_DOMAIN = "sip.provider.com" # ИЗМЕНИТЕ
+SIP_USER = "21261774115582"    # ИЗМЕНИТЕ
+SIP_PASSWORD = "FlvUenbQ" # ИЗМЕНИТЕ
+SIP_DOMAIN = "181571.voice.plusofon.ru" # ИЗМЕНИТЕ
 # --------------------
 
 # Флаг для отслеживания, был ли уже воспроизведен файл
