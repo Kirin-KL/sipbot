@@ -6,7 +6,8 @@ def on_call(from_uri):
     bs.play("/path/to/your.wav")   # можно проиграть TTS-файл
     # или позже: bs.hangup()
 
-bs = BareSIP(debug=False)
+bs = BareSIP(path="/usr/bin/baresip", debug=True)
+
 bs.on(BareSIP.Event.INCOMING_CALL, on_call)
 
 bs.create_user_agent(
