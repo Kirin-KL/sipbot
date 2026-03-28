@@ -9,8 +9,12 @@ def on_call(from_uri):
 bs = BareSIP(debug=False)
 bs.on(BareSIP.Event.INCOMING_CALL, on_call)
 
-bs.start()
-bs.create_user_agent("21261774115582", "FlvUenbQ", "181571.voice.plusofon.ru")
+bs.create_user_agent(
+    "21261774115582",
+    "FlvUenbQ",
+    "sip:21261774115582@181571.voice.plusofon.ru"
+)
+
 
 # держим процесс живым
 while True:
