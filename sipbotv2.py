@@ -175,7 +175,6 @@ try:
             elif c.phase == "record" and now >= c.record_until:
                 digits = c.stop_record()
 
-                # ===== СЦЕНАРИЙ =====
                 if c.state == "account":
                     print("Account:", digits)
                     c.state = "cold"
@@ -196,8 +195,6 @@ try:
                     c.call.hangup()
                     active_calls.remove(c)
                     continue
-
-                c.phase = "idle"
 
 except KeyboardInterrupt:
     print("Exiting...")
