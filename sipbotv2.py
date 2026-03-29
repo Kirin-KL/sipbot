@@ -250,9 +250,9 @@ try:
                     c.state = "done"
                     c.ask("aydio/end.wav")
 
+
                 elif c.state == "done":
                     print("📤 Отправка данных на сервер...")
-
                     status, text = send_to_n8n(
                         phone=c.phone,
                         account=c.account,
@@ -264,12 +264,18 @@ try:
 
                     print("❌ Завершение звонка")
 
-                    if c.call.info().state == pj.CallState.DISCONNECTED:
-                        print("⚠️ Call already disconnected, skipping hangup()")
+                    try:
+                        state = c.call.info().state
+                    except ReferenceError:
+                        print("⚠️ Call object already destroyed, skipping hangup()")
                     else:
-                        c.call.hangup()
+                        if state == pj.CallState.DISCONNECTED:
+                            print("⚠️ Call already disconnected, skipping hangup()")
+                        else:
+                            c.call.hangup()
                     active_calls.remove(c)
                     continue
+
 
 
 
