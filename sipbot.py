@@ -1,5 +1,6 @@
 import pjsua as pj
 import time
+from webhook import send_to_n8n
 
 # ======== Настройки SIP ========
 SIP_DOMAIN = "181571.voice.plusofon.ru"
