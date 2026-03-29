@@ -44,7 +44,7 @@ def extract_digits(text):
         "ноль": "0", "один": "1", "два": "2",
         "три": "3", "четыре": "4", "пять": "5",
         "шесть": "6", "семь": "7",
-        "восемь": "8", "девять": "9"
+        "восемь": "8", "девять": "9", "раз":"1", "рас":"1"
     }
 
     result = ""
@@ -106,11 +106,11 @@ class CallCallback(pj.CallCallback):
         self.hot = ""
 
     def on_state(self):
-        print("Call state:", self.call.info().state_text)
+        print("Информация о звонке:", self.call.info().state_text)
 
     def on_media_state(self):
         if self.call.info().media_state == pj.MediaState.ACTIVE:
-            print("📞 Call started")
+            print("📞 Звонок начался")
             self.ask("aydio/account.wav")
 
     # ======== проигрывание ========
@@ -134,7 +134,7 @@ class CallCallback(pj.CallCallback):
 
     # ======== запись ========
     def start_record(self):
-        print("🎤 Recording...")
+        print("🎤 Запись звука")
         self.recorder_id = lib.create_recorder("input.wav")
 
         rec_slot = lib.recorder_get_slot(self.recorder_id)
@@ -146,7 +146,7 @@ class CallCallback(pj.CallCallback):
         self.record_until = time.time() + 10
 
     def stop_record(self):
-        print("🛑 Stop recording")
+        print("🛑 Конец записи звука")
 
         if self.recorder_id:
             lib.recorder_destroy(self.recorder_id)
@@ -155,10 +155,10 @@ class CallCallback(pj.CallCallback):
         convert_wav("input.wav", "clean.wav")
 
         text = recognize("clean.wav")
-        print("🧠 Recognized:", text)
+        print("🧠 Распознавание:", text)
 
         digits = extract_digits(text)
-        print("🔢 Digits:", digits)
+        print("🔢 Цифры:", digits)
 
         return digits
 
@@ -169,7 +169,7 @@ class AccountCallback(pj.AccountCallback):
         super().__init__(acc)
 
     def on_incoming_call(self, call):
-        print("📞 Incoming call")
+        print("📞 Входящий звонок")
 
         cb = CallCallback(call)
         call.set_callback(cb)
@@ -195,7 +195,7 @@ try:
     acc = lib.create_account(acc_cfg)
     acc.set_callback(AccountCallback(acc))
 
-    print("✅ Ready")
+    print("✅ Готово!")
 
     # ======== MAIN LOOP ========
     while True:
@@ -215,36 +215,36 @@ try:
                 # ===== ВАЛИДАЦИЯ =====
                 if c.state == "account":
                     if not validate_digits(digits, 10):
-                        print("❌ Account digits invalid, repeating...")
+                        print("❌ Номер лицевого счета не верный (количество), повтор...")
                         c.ask("aydio/repeat.wav")
                         continue
                     c.account = digits
-                    print("Account:", digits)
+                    print("Лицевой счёт:", digits)
                     c.state = "cold"
                     c.ask("aydio/cold_water.wav")
 
                 elif c.state == "cold":
                     if not validate_digits(digits, 8):
-                        print("❌ Cold water digits invalid, repeating...")
+                        print("❌ Показания счетчика неверные (количество), повтор...")
                         c.ask("aydio/repeat.wav")
                         continue
                     c.cold = digits
-                    print("Cold:", digits)
+                    print("Холодная вода:", digits)
                     c.state = "hot"
                     c.ask("aydio/hot_water.wav")
 
                 elif c.state == "hot":
                     if not validate_digits(digits, 8):
-                        print("❌ Hot water digits invalid, repeating...")
+                        print("❌ Показания счетчика неверные (количество), повтор...")
                         c.ask("aydio/repeat.wav")
                         continue
                     c.hot = digits
-                    print("Hot:", digits)
+                    print("Горячая вода:", digits)
                     c.state = "done"
                     c.ask("aydio/end.wav")
 
                 elif c.state == "done":
-                    print("📤 Sending data to n8n...")
+                    print("📤 Отправка данных на сервер...")
 
                     status, text = send_to_n8n(
                         phone=c.phone,
@@ -253,9 +253,9 @@ try:
                         coldWater=c.cold
                     )
 
-                    print("n8n response:", status, text)
+                    print("Ответ сервера:", status, text)
 
-                    print("❌ Hanging up")
+                    print("❌ Завершение звонка")
                     c.call.hangup()
                     active_calls.remove(c)
                     continue
@@ -263,7 +263,7 @@ try:
 
 
 except KeyboardInterrupt:
-    print("Exiting...")
+    print("Выход..")
 
 finally:
     lib.destroy()
