@@ -256,7 +256,11 @@ try:
                     print("Ответ сервера:", status, text)
 
                     print("❌ Завершение звонка")
-                    c.call.hangup()
+
+                    if c.call.info().state == pj.CallState.DISCONNECTED:
+                        print("⚠️ Call already disconnected, skipping hangup()")
+                    else:
+                        c.call.hangup()
                     active_calls.remove(c)
                     continue
 
