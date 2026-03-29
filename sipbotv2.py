@@ -5,11 +5,14 @@ import subprocess
 import re
 from webhook import send_to_n8n
 
-
 # ======== SIP ========
 SIP_DOMAIN = "181571.voice.plusofon.ru"
 SIP_USER = "21261774115582"
 SIP_PASS = "FlvUenbQ"
+
+# ======== Проверка длинны  ========
+def validate_digits(digits: str, expected_len: int) -> bool:
+    return digits.isdigit() and len(digits) == expected_len
 
 # ======== STT ========
 def recognize(filename):
@@ -209,29 +212,40 @@ try:
             elif c.phase == "record" and now >= c.record_until:
                 digits = c.stop_record()
 
-                # ===== СЦЕНАРИЙ =====
+                # ===== ВАЛИДАЦИЯ =====
                 if c.state == "account":
-                    print("Account:", digits)
+                    if not validate_digits(digits, 10):
+                        print("❌ Account digits invalid, repeating...")
+                        c.ask("aydio/repeat.wav")
+                        continue
                     c.account = digits
+                    print("Account:", digits)
                     c.state = "cold"
                     c.ask("aydio/cold_water.wav")
 
                 elif c.state == "cold":
-                    print("Cold:", digits)
+                    if not validate_digits(digits, 8):
+                        print("❌ Cold water digits invalid, repeating...")
+                        c.ask("aydio/repeat.wav")
+                        continue
                     c.cold = digits
+                    print("Cold:", digits)
                     c.state = "hot"
                     c.ask("aydio/hot_water.wav")
 
                 elif c.state == "hot":
-                    print("Hot:", digits)
+                    if not validate_digits(digits, 8):
+                        print("❌ Hot water digits invalid, repeating...")
+                        c.ask("aydio/repeat.wav")
+                        continue
                     c.hot = digits
+                    print("Hot:", digits)
                     c.state = "done"
                     c.ask("aydio/end.wav")
 
                 elif c.state == "done":
                     print("📤 Sending data to n8n...")
 
-                    # отправляем данные
                     status, text = send_to_n8n(
                         phone=c.phone,
                         account=c.account,
@@ -245,6 +259,7 @@ try:
                     c.call.hangup()
                     active_calls.remove(c)
                     continue
+
 
 
 except KeyboardInterrupt:
