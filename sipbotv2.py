@@ -1,43 +1,15 @@
 import pjsua as pj
 import time
 import speech_recognition as sr
-import re
-
 import subprocess
-
-def convert_wav(input_file, output_file):
-    subprocess.run([
-        "ffmpeg",
-        "-y",
-        "-i", input_file,
-        "-ar", "8000",
-        "-ac", "1",
-        "-f", "wav",
-        output_file
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-def clean_text(text):
-    return re.sub(r"[^а-я0-9 ]", "", text.lower())
-
-# ======== текст → цифры ========
-def text_to_digits(text):
-    text = text.lower()
-    result = ""
-
-    for word in text.split():
-        if word in NUM_MAP:
-            result += NUM_MAP[word]
-        elif word.isdigit():
-            result += word
-
-    return result
+import re
 
 # ======== SIP ========
 SIP_DOMAIN = "181571.voice.plusofon.ru"
 SIP_USER = "21261774115582"
 SIP_PASS = "FlvUenbQ"
 
-# ======== Speech-to-Text ========
+# ======== STT ========
 def recognize(filename):
     r = sr.Recognizer()
 
@@ -45,27 +17,36 @@ def recognize(filename):
         audio = r.record(source)
 
     try:
-        text = r.recognize_google(audio, language="ru-RU")
-        return text
-    except sr.UnknownValueError:
-        return ""
-    except sr.RequestError as e:
-        print("STT error:", e)
+        return r.recognize_google(audio, language="ru-RU")
+    except:
         return ""
 
-# ======== текст → цифры ========
-NUM_MAP = {
-    "ноль": "0", "один": "1", "два": "2",
-    "три": "3", "четыре": "4", "пять": "5",
-    "шесть": "6", "семь": "7",
-    "восемь": "8", "девять": "9"
-}
+# ======== FIX WAV через FFmpeg ========
+def convert_wav(input_file, output_file):
+    subprocess.run([
+        "ffmpeg", "-y", "-i", input_file,
+        "-ar", "8000", "-ac", "1", output_file
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-def text_to_digits(text):
+# ======== извлечение цифр ========
+def extract_digits(text):
+    # если уже цифры
+    digits = re.findall(r"\d", text)
+    if digits:
+        return "".join(digits)
+
+    NUM_MAP = {
+        "ноль": "0", "один": "1", "два": "2",
+        "три": "3", "четыре": "4", "пять": "5",
+        "шесть": "6", "семь": "7",
+        "восемь": "8", "девять": "9"
+    }
+
     result = ""
     for word in text.lower().split():
         if word in NUM_MAP:
             result += NUM_MAP[word]
+
     return result
 
 # ======== лог ========
@@ -78,9 +59,14 @@ active_calls = []
 class CallCallback(pj.CallCallback):
     def __init__(self, call):
         super().__init__(call)
-        self.state = "start"
+
+        self.state = "account"
+        self.phase = "idle"
+
+        self.wait_until = None
         self.record_until = None
         self.recorder_id = None
+        self.player_id = None
 
     def on_state(self):
         print("Call state:", self.call.info().state_text)
@@ -88,59 +74,56 @@ class CallCallback(pj.CallCallback):
     def on_media_state(self):
         if self.call.info().media_state == pj.MediaState.ACTIVE:
             print("📞 Call started")
-            self.ask_account()
+            self.ask("aydio/account.wav")
 
     # ======== проигрывание ========
     def play(self, file):
-        player_id = lib.create_player(file, loop=False)
-        slot = lib.player_get_slot(player_id)
+        if self.player_id:
+            try:
+                lib.player_destroy(self.player_id)
+            except:
+                pass
+
+        self.player_id = lib.create_player(file, loop=False)
+        slot = lib.player_get_slot(self.player_id)
         call_slot = self.call.info().conf_slot
         lib.conf_connect(slot, call_slot)
 
+    # ======== задать вопрос ========
+    def ask(self, file):
+        self.play(file)
+        self.phase = "wait"
+        self.wait_until = time.time() + 3  # ждать пока проиграется
+
     # ======== запись ========
-    def start_record(self, filename="input.wav", duration=7):
+    def start_record(self):
         print("🎤 Recording...")
-        self.recorder_id = lib.create_recorder(filename)
+        self.recorder_id = lib.create_recorder("input.wav")
+
         rec_slot = lib.recorder_get_slot(self.recorder_id)
         call_slot = self.call.info().conf_slot
+
         lib.conf_connect(call_slot, rec_slot)
 
-        self.record_until = time.time() + duration
+        self.phase = "record"
+        self.record_until = time.time() + 5
 
-    def stop_record_and_recognize(self):
+    def stop_record(self):
         print("🛑 Stop recording")
-        lib.recorder_destroy(self.recorder_id)
-        self.recorder_id = None
+
+        if self.recorder_id:
+            lib.recorder_destroy(self.recorder_id)
+            self.recorder_id = None
 
         convert_wav("input.wav", "clean.wav")
+
         text = recognize("clean.wav")
         print("🧠 Recognized:", text)
 
-        digits = text_to_digits(text)
+        digits = extract_digits(text)
         print("🔢 Digits:", digits)
 
         return digits
-
-    # ======== сценарий ========
-    def ask_account(self):
-        self.play("aydio/account.wav")
-        self.state = "wait_account"
-        self.record_until = time.time() + 2  # пауза перед записью
-
-    def ask_cold(self):
-        self.play("aydio/cold_water.wav")
-        self.state = "wait_cold"
-        self.record_until = time.time() + 2
-
-    def ask_hot(self):
-        self.play("aydio/hot_water.wav")
-        self.state = "wait_hot"
-        self.record_until = time.time() + 2
-
-    def say_bye(self):
-        self.play("aydio/end.wav")
-        self.state = "done"
-        self.record_until = time.time() + 3
 
 
 # ======== Account ========
@@ -150,13 +133,15 @@ class AccountCallback(pj.AccountCallback):
 
     def on_incoming_call(self, call):
         print("📞 Incoming call")
+
         cb = CallCallback(call)
         call.set_callback(cb)
         call.answer(200)
+
         active_calls.append(cb)
 
 
-# ======== init ========
+# ======== INIT ========
 lib = pj.Lib()
 
 try:
@@ -178,39 +163,45 @@ try:
     # ======== MAIN LOOP ========
     while True:
         lib.handle_events(50)
-
         now = time.time()
 
         for c in active_calls[:]:
 
-            # старт записи после паузы
-            if c.record_until and now >= c.record_until:
-                if c.recorder_id is None:
-                    c.start_record()
-                else:
-                    digits = c.stop_record_and_recognize()
+            # ===== ЖДЕМ ПОСЛЕ ВОПРОСА =====
+            if c.phase == "wait" and now >= c.wait_until:
+                c.start_record()
 
-                    if c.state == "wait_account":
-                        print("Account:", digits)
-                        c.ask_cold()
+            # ===== ЗАПИСЬ ЗАКОНЧЕНА =====
+            elif c.phase == "record" and now >= c.record_until:
+                digits = c.stop_record()
 
-                    elif c.state == "wait_cold":
-                        print("Cold:", digits)
-                        c.ask_hot()
+                # ===== СЦЕНАРИЙ =====
+                if c.state == "account":
+                    print("Account:", digits)
+                    c.state = "cold"
+                    c.ask("aydio/cold_water.wav")
 
-                    elif c.state == "wait_hot":
-                        print("Hot:", digits)
-                        c.say_bye()
+                elif c.state == "cold":
+                    print("Cold:", digits)
+                    c.state = "hot"
+                    c.ask("aydio/hot_water.wav")
 
-                    elif c.state == "done":
-                        print("❌ Hanging up")
-                        c.call.hangup()
-                        active_calls.remove(c)
+                elif c.state == "hot":
+                    print("Hot:", digits)
+                    c.state = "done"
+                    c.ask("aydio/end.wav")
 
-                    c.record_until = None
+                elif c.state == "done":
+                    print("❌ Hanging up")
+                    c.call.hangup()
+                    active_calls.remove(c)
+                    continue
+
+                c.phase = "idle"
 
 except KeyboardInterrupt:
-    pass
+    print("Exiting...")
 
 finally:
     lib.destroy()
+    lib = None
