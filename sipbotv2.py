@@ -3,6 +3,19 @@ import time
 import speech_recognition as sr
 import re
 
+import subprocess
+
+def convert_wav(input_file, output_file):
+    subprocess.run([
+        "ffmpeg",
+        "-y",
+        "-i", input_file,
+        "-ar", "8000",
+        "-ac", "1",
+        "-f", "wav",
+        output_file
+    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
 def clean_text(text):
     return re.sub(r"[^а-я0-9 ]", "", text.lower())
 
@@ -99,7 +112,8 @@ class CallCallback(pj.CallCallback):
         lib.recorder_destroy(self.recorder_id)
         self.recorder_id = None
 
-        text = recognize("input.wav")
+        convert_wav("input.wav", "clean.wav")
+        text = recognize("clean.wav")
         print("🧠 Recognized:", text)
 
         digits = text_to_digits(text)
