@@ -5,7 +5,7 @@ import threading
 # ======== Настройки SIP ========
 SIP_DOMAIN = "181571.voice.plusofon.ru"      # твой SIP сервер
 SIP_USER = "21261774115582"                  # логин
-SIP_PASS = "your_password_here"              # пароль
+SIP_PASS = "FlvUenbQ"              # пароль
 
 
 # ======== Логирование ========
