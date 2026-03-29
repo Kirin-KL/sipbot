@@ -33,7 +33,9 @@ try:
     acc_cfg = pj.AccountConfig()
     acc_cfg.id = f"sip:{SIP_USER}@{SIP_DOMAIN}"
     acc_cfg.reg_uri = f"sip:{SIP_DOMAIN}"
-    acc_cfg.auth_cred = [pj.AuthCred(realm="*", username=SIP_USER, data=SIP_PASS)]
+    acc_cfg.auth_cred = [
+        pj.AuthCred("*", SIP_USER, SIP_PASS)
+    ]
 
     # Создаём аккаунт
     acc = lib.create_account(acc_cfg)
