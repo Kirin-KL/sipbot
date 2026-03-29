@@ -3,6 +3,8 @@ import time
 import speech_recognition as sr
 import subprocess
 import re
+from webhook import send_to_n8n
+
 
 # ======== SIP ========
 SIP_DOMAIN = "181571.voice.plusofon.ru"
@@ -55,6 +57,33 @@ def log_cb(level, msg, length):
 
 active_calls = []
 
+# ======== парсинг номера телефона ========
+def parse_phone(uri: str) -> str:
+    """
+    Извлекает номер телефона из SIP URI.
+    Возвращает только цифры.
+    """
+    if not uri:
+        return ""
+
+    # 1. Ищем номер внутри sip:...@
+    m = re.search(r"sip:(\+?\d+)", uri)
+    if m:
+        return m.group(1)
+
+    # 2. Ищем номер внутри tel:...
+    m = re.search(r"tel:(\+?\d+)", uri)
+    if m:
+        return m.group(1)
+
+    # 3. Если ничего не нашли — вытаскиваем все цифры
+    digits = re.findall(r"\d+", uri)
+    if digits:
+        return digits[0]
+
+    return ""
+
+
 # ======== Call ========
 class CallCallback(pj.CallCallback):
     def __init__(self, call):
@@ -67,6 +96,11 @@ class CallCallback(pj.CallCallback):
         self.record_until = None
         self.recorder_id = None
         self.player_id = None
+
+        self.phone = parse_phone(call.info().remote_uri)
+        self.account = ""
+        self.cold = ""
+        self.hot = ""
 
     def on_state(self):
         print("Call state:", self.call.info().state_text)
@@ -106,7 +140,7 @@ class CallCallback(pj.CallCallback):
         lib.conf_connect(call_slot, rec_slot)
 
         self.phase = "record"
-        self.record_until = time.time() + 5
+        self.record_until = time.time() + 10
 
     def stop_record(self):
         print("🛑 Stop recording")
@@ -175,26 +209,43 @@ try:
             elif c.phase == "record" and now >= c.record_until:
                 digits = c.stop_record()
 
+                # ===== СЦЕНАРИЙ =====
                 if c.state == "account":
                     print("Account:", digits)
+                    c.account = digits
                     c.state = "cold"
                     c.ask("aydio/cold_water.wav")
 
                 elif c.state == "cold":
                     print("Cold:", digits)
+                    c.cold = digits
                     c.state = "hot"
                     c.ask("aydio/hot_water.wav")
 
                 elif c.state == "hot":
                     print("Hot:", digits)
+                    c.hot = digits
                     c.state = "done"
                     c.ask("aydio/end.wav")
 
                 elif c.state == "done":
+                    print("📤 Sending data to n8n...")
+
+                    # отправляем данные
+                    status, text = send_to_n8n(
+                        phone=c.phone,
+                        account=c.account,
+                        hotWater=c.hot,
+                        coldWater=c.cold
+                    )
+
+                    print("n8n response:", status, text)
+
                     print("❌ Hanging up")
                     c.call.hangup()
                     active_calls.remove(c)
                     continue
+
 
 except KeyboardInterrupt:
     print("Exiting...")

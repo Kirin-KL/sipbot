@@ -2,7 +2,7 @@ import requests
 
 
 def send_to_n8n(phone: str, account: str, hotWater: str, coldWater: str):
-    url = "https://kirill-syudi2.app.n8n.cloud/webhook-test/insert-record"
+    url = "https://kirill-syudi2.app.n8n.cloud/webhook/insert-record"
 
     payload = {
         "phone": phone,
