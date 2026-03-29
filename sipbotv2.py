@@ -267,10 +267,10 @@ try:
                     try:
                         state = c.call.info().state
                     except ReferenceError:
-                        print("⚠️ Call object already destroyed, skipping hangup()")
+                        print("⚠️ Звонок уже уничтожен")
                     else:
                         if state == pj.CallState.DISCONNECTED:
-                            print("⚠️ Call already disconnected, skipping hangup()")
+                            print("⚠️ Звонок уже закончен")
                         else:
                             c.call.hangup()
                     active_calls.remove(c)
